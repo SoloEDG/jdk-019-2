@@ -23,7 +23,12 @@ function drag(e: PointerEvent, n: Node, kind: string) {
 }
 </script>
 <template>
-  <g v-for="s in doc.shapes.filter((s) => doc.selected.includes(s.id))"
+  <g
+    v-for="s in doc.shapes.filter(
+      (s) =>
+        doc.selected.includes(s.id) &&
+        (!doc.isolated || s.maskId === doc.isolated),
+    )"
     ><g v-for="n in s.nodes"
       ><path
         :d="`M${n.in.x},${n.in.y} L${n.x},${n.y} L${n.out.x},${n.out.y}`"

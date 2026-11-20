@@ -2,6 +2,7 @@
 import { active } from "../model/active";
 import { style } from "../model/style";
 import { colors } from "../lib/colors";
+import GradientEditor from "../../masks/ui/GradientEditor.vue";
 </script>
 <template>
   <aside>
@@ -63,7 +64,8 @@ import { colors } from "../lib/colors";
           @change="
             style('closed', ($event.target as HTMLInputElement).checked)
           " /></label
-    ></template>
+      ><GradientEditor /> ></template
+    >
     <p v-else>Select an object to edit its appearance.</p>
     <div class="tip">
       ✦ Make room for ideas.<br /><small

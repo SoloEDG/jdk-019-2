@@ -1,8 +1,5 @@
-import { doc } from "../../../shared/document";
+import { selectShape } from "../../masks/model/select";
+/** 统一走遮罩感知的选择入口（整族选择 / 隔离内分别选择） */
 export function select(id: string, multi: boolean) {
-  const s = doc.shapes.find((s) => s.id === id);
-  const ids = s?.group
-    ? doc.shapes.filter((x) => x.group === s.group).map((x) => x.id)
-    : [id];
-  doc.selected = multi ? [...new Set([...doc.selected, ...ids])] : ids;
+  selectShape(id, multi);
 }

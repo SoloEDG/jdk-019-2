@@ -10,6 +10,7 @@ export function beginEdit() {
 }
 function install(snapshot: string) {
   doc.shapes = JSON.parse(snapshot);
+  doc.isolated = null;
   doc.selected = doc.selected.filter((id) =>
     doc.shapes.some((s) => s.id === id),
   );

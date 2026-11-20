@@ -1,7 +1,8 @@
-import { beginEdit, revision } from "../../drawing";
+import { beginEdit, revision } from "../../drawing/model/history";
 import { ref } from "vue";
 import { doc } from "../../../shared/document";
-import type { Shape, Point } from "../../../shared/types";
+import { repairReferences } from "../../masks/lib/relations";
+import type { Gradient, Shape, Point } from "../../../shared/types";
 export const storageStatus = ref("All changes saved locally");
 export function save() {
   try {
@@ -15,19 +16,37 @@ export function save() {
 function point(v: Point) {
   return v && Number.isFinite(v.x) && Number.isFinite(v.y);
 }
-function valid(s: Shape) {
+function validGradient(g: unknown): g is Gradient {
+  if (!g || typeof g !== "object") return false;
+  const v = g as Record<string, unknown>;
+  if (!Array.isArray(v.stops) || v.stops.length < 2) return false;
+  return ["x1", "y1", "x2", "y2"].every((k) => Number.isFinite(v[k] as number));
+}
+function validNode(n: unknown): boolean {
+  if (!n || typeof n !== "object") return false;
+  const v = n as { x?: unknown; y?: unknown; in?: unknown; out?: unknown };
+  return point(v as Point) && point(v.in as Point) && point(v.out as Point);
+}
+function valid(s: unknown): s is Shape {
+  if (!s || typeof s !== "object") return false;
+  const v = s as Record<string, unknown>;
   return (
-    s &&
-    typeof s.id === "string" &&
-    typeof s.name === "string" &&
-    Array.isArray(s.nodes) &&
-    s.nodes.every((n) => point(n) && point(n.in) && point(n.out)) &&
-    typeof s.fill === "string" &&
-    /^(none|#[0-9a-f]{3,8})$/i.test(s.fill) &&
-    typeof s.stroke === "string" &&
-    /^#[0-9a-f]{3,8}$/i.test(s.stroke) &&
-    Number.isFinite(s.width) &&
-    Number.isFinite(s.opacity)
+    typeof v.id === "string" &&
+    typeof v.name === "string" &&
+    Array.isArray(v.nodes) &&
+    v.nodes.every(validNode) &&
+    typeof v.fill === "string" &&
+    /^(none|#[0-9a-f]{3,8})$/i.test(v.fill) &&
+    typeof v.stroke === "string" &&
+    /^#[0-9a-f]{3,8}$/i.test(v.stroke) &&
+    Number.isFinite(v.width) &&
+    Number.isFinite(v.opacity) &&
+    (v.maskRole === undefined ||
+      v.maskRole === "clip" ||
+      v.maskRole === "opacity") &&
+    (v.maskId === undefined || typeof v.maskId === "string") &&
+    (v.parentMaskId === undefined || typeof v.parentMaskId === "string") &&
+    (v.gradient === undefined || validGradient(v.gradient))
   );
 }
 export function restore() {
@@ -35,9 +54,17 @@ export function restore() {
     const value = JSON.parse(localStorage.getItem("forma-document") || "null");
     if (Array.isArray(value) && value.every(valid)) {
       beginEdit();
-      doc.shapes = value;
+      // 深拷贝后修复悬空/循环引用，任何损坏都不会阻止文档再次打开
+      const shapes: Shape[] = JSON.parse(JSON.stringify(value));
+      const problems = repairReferences(shapes);
+      doc.shapes = shapes;
+      doc.isolated = null;
       revision.value++;
       doc.selected = [];
+      if (problems.length) {
+        storageStatus.value =
+          "已修复损坏的遮罩引用并安全加载（" + problems.length + " 处）";
+      }
       return true;
     }
   } catch {}

@@ -147,6 +147,96 @@ nav small {
   font-size: 10px;
   color: #a798b5;
 }
+.mask-bar {
+  padding: 0 12px 14px;
+  border-bottom: 1px solid #eee7f3;
+}
+.mask-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.mask-row button {
+  flex: 1;
+  font-size: 10px;
+  padding: 8px 6px;
+  white-space: nowrap;
+}
+.mask-row button.active {
+  background: #8055d5;
+  color: white;
+}
+.nest {
+  flex: 1;
+  font-size: 10px;
+  color: #8a7d96;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nest select {
+  flex: 1;
+  font: inherit;
+  font-size: 10px;
+  padding: 6px;
+  border: 1px solid #e9e3ee;
+  border-radius: 5px;
+  background: white;
+  color: #51445f;
+}
+.isolation-hint {
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f3edfb;
+  color: #7e56d8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.notice {
+  color: #c2663a;
+  font-weight: 600;
+}
+.gradient-editor {
+  border-top: 1px solid #eee7f3;
+  margin-top: 20px;
+  padding-top: 14px;
+}
+.gradient-preview {
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid #e9e3ee;
+  margin-bottom: 14px;
+}
+.gradient-editor .axis {
+  margin: 10px 0;
+}
+.gradient-editor .axis input {
+  width: 78px;
+}
+.stop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.stop-row input[type="range"] {
+  flex: 1;
+}
+button.mini {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+button.mini:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+button.full {
+  width: 100%;
+  border: 1px solid #e9e3ee;
+  margin-top: 4px;
+}
 main {
   flex: 1;
   min-width: 0;

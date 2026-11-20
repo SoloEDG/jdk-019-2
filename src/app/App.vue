@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { watch } from "vue";
 import { doc } from "../shared/document";
 import {
-  Tools,
-  path,
   create,
   add,
   seed,
@@ -12,17 +10,27 @@ import {
   redo,
   revision,
 } from "../features/drawing";
-import { NodeOverlay, coordinates, select } from "../features/nodes";
+import { Tools } from "../features/drawing";
+import { NodeOverlay, coordinates } from "../features/nodes";
 import { Properties } from "../features/appearance";
 import { Layers, translateSelected } from "../features/layers";
 import { ExportBar, restore, save, storageStatus } from "../features/export";
+import {
+  MaskDefs,
+  MaskOverlay,
+  MaskBar,
+  ArtworkNode,
+  renderTree,
+  selectShape,
+  exitIsolation,
+} from "../features/masks";
 import type { Shape } from "../shared/types";
 if (!restore()) seed();
-doc.selected = doc.shapes.length
-  ? [doc.shapes[Math.min(3, doc.shapes.length - 1)].id]
-  : [];
+// 默认选中第一个普通内容对象（遮罩形状通过遮罩轮廓单独编辑）
+const firstContent = doc.shapes.find((s) => !s.maskRole);
+doc.selected = firstContent ? [firstContent.id] : [];
 watch(() => doc.shapes, save, { deep: true });
-const paths = computed(() => doc.shapes.map(path));
+const artwork = renderTree;
 let drawing: Shape | undefined;
 watch(
   () => doc.tool,
@@ -54,7 +62,12 @@ function down(e: PointerEvent) {
       { once: true },
     );
   } else if (id) {
-    select(id, e.shiftKey);
+    // 隔离模式下点击组外对象不响应，保证内部编辑互不干扰
+    if (doc.isolated) {
+      const target = doc.shapes.find((s) => s.id === id);
+      if (!target || target.maskId !== doc.isolated) return;
+    }
+    selectShape(id, e.shiftKey);
     if (doc.tool === "nodes") return;
     let last = p;
     const f = (ev: PointerEvent) => {
@@ -68,13 +81,25 @@ function down(e: PointerEvent) {
       () => window.removeEventListener("pointermove", f),
       { once: true },
     );
-  } else doc.selected = [];
+  } else {
+    if (doc.isolated) return;
+    doc.selected = [];
+  }
 }
 function finish() {
   drawing = undefined;
   doc.tool = "select";
 }
+function canvasDbl(e: MouseEvent) {
+  // 双击遮罩轮廓用于进入隔离，不结束钢笔绘制
+  if ((e.target as Element).hasAttribute("data-mask")) return;
+  finish();
+}
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && doc.isolated) {
+    exitIsolation();
+    return;
+  }
   if (e.key === "Enter" || e.key === "Escape") finish();
 });
 </script>
@@ -82,13 +107,13 @@ window.addEventListener("keydown", (e) => {
   <header>
     <b class="brand">◈ forma <small>VECTOR STUDIO</small></b>
     <div>Bloom exploration <span> / Personal workspace</span></div>
-    <ExportBar :paths="paths" />
+    <ExportBar />
   </header>
   <div class="workspace">
     <div class="left">
       <h5>PROJECT <span>＋</span></h5>
       <p class="project">▣ Bloom / Artboard 01</p>
-      <Tools /><Layers />
+      <Tools /><MaskBar /><Layers />
       <p class="signature">✧ Designed to explore.</p>
     </div>
     <main>
@@ -113,30 +138,31 @@ window.addEventListener("keydown", (e) => {
           }"
           viewBox="0 0 800 600"
           @pointerdown="down"
-          @dblclick="finish"
+          @dblclick="canvasDbl"
         >
           <rect width="800" height="600" fill="#fffdfb" />
-          <path
-            v-for="s in doc.shapes"
-            :key="s.id"
-            :data-shape="s.id"
-            :d="path(s)"
-            :fill="s.fill"
-            :stroke="s.stroke"
-            :stroke-width="s.width"
-            :opacity="s.opacity"
+          <MaskDefs />
+          <ArtworkNode
+            v-for="n in artwork"
+            :key="n.kind === 'shape' ? n.shape.id : n.maskId"
+            :node="n"
           />
+          <MaskOverlay />
           <NodeOverlay />
         </svg>
       </div>
       <footer>
         <span>● {{ storageStatus }}</span
-        ><span>{{
-          doc.tool === "pen"
-            ? "Click / drag to draw · Enter to finish"
-            : "Shift + click to select multiple · Drag to move"
-        }}</span
-        ><span>{{ doc.selected.length }} selected</span>
+        ><span v-if="doc.notice" class="notice" data-testid="notice">{{
+          doc.notice
+        }}</span>
+        <span v-else>{{
+          doc.isolated
+            ? "隔离编辑：分别调整遮罩与内容 · Esc 退出"
+            : doc.tool === "pen"
+              ? "Click / drag to draw · Enter to finish"
+              : "Shift + click 多选 · 双击遮罩进入内部 · 拖动整组一起移动"
+        }}</span><span>{{ doc.selected.length }} selected</span>
       </footer>
     </main>
     <Properties />
